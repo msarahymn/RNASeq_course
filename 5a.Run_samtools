@@ -1,0 +1,38 @@
+#!/bin/bash
+
+#SBATCH --mail-type=fail
+#SBATCH --job-name="bam"
+#SBATCH --output=bam.out
+#SBATCH --error=bam.err
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=4
+#SBATCH --time=12:00:00
+#SBATCH --mem=29G
+#SBATCH --partition=pibu_el8
+
+SAMPLE=$1
+
+#create the results directory
+mkdir -p /data/users/mmaisyaroh/rnaseq/map/bam
+mkdir -p /data/users/mmaisyaroh/rnaseq/map/sortedbam
+
+#set conversion directories
+input_conv_dir="/data/users/mmaisyaroh/rnaseq/map/sam"
+output_conv_dir="/data/users/mmaisyaroh/rnaseq/map/bam"
+
+#execute samtools view to convert SAM file to BAM format
+apptainer exec -B${input_conv_dir}:/input -B${output_conv_dir}:/output /containers/apptainer/hisat2_samtools_408dfd02f175cd88.sif samtools view -S -b /input/${SAMPLE}.sam -o /output/${SAMPLE}.bam
+
+#set sorting directories
+input_sort_dir="/data/users/mmaisyaroh/rnaseq/map/bam"
+output_sort_dir="/data/users/mmaisyaroh/rnaseq/map/sortedbam"
+
+#execute samtools sort to sort the BAM files
+apptainer exec -B${input_sort_dir}:/input -B${output_sort_dir}:/output /containers/apptainer/hisat2_samtools_408dfd02f175cd88.sif samtools sort -m 2G -@ 8 -o /output/${SAMPLE}_sorted.bam -T temp /input/${SAMPLE}.bam
+
+#set indexing directories
+index_dir="/data/users/mmaisyaroh/rnaseq/map/sortedbam"
+
+# Execute samtools index to index sorted BAM files
+apptainer exec -B${index_dir}:/input -B${index_dir}:/output /containers/apptainer/hisat2_samtools_408dfd02f175cd88.sif samtools index /input/${SAMPLE}_sorted.bam /output/${SAMPLE}_index.bai
+

@@ -1,0 +1,48 @@
+#!/bin/bash
+
+#SBATCH --mail-type=fail
+#SBATCH --job-name="featureCounts"
+#SBATCH --output=featureCountspairedend2.out
+#SBATCH --error=featureCountspairedend2.err
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=4
+#SBATCH --time=13:00:00
+#SBATCH --mem=4G
+#SBATCH --partition=pibu_el8
+
+# Create output directory
+mkdir -p /data/users/mmaisyaroh/rnaseq/map/count
+
+# Set input directories
+input_bam_dir="/data/users/mmaisyaroh/rnaseq/map/sortedbam"
+annotation_file="/data/users/mmaisyaroh/rnaseq/map/Homo_sapiens.GRCh38.113.gtf"
+output_count_file="/data/users/mmaisyaroh/rnaseq/map/count/genecountspairedend2.txt"
+
+# List of BAM files
+bam_files=(
+  "HER21_sorted.bam" 
+  "HER22_sorted.bam" 
+  "HER23_sorted.bam" 
+  "NonTNBC1_sorted.bam" 
+  "NonTNBC2_sorted.bam" 
+  "NonTNBC3_sorted.bam" 
+  "Normal1_sorted.bam" 
+  "Normal2_sorted.bam" 
+  "Normal3_sorted.bam" 
+  "TNBC1_sorted.bam" 
+  "TNBC2_sorted.bam" 
+  "TNBC3_sorted.bam"
+)
+
+# Adjust paths for container
+bam_paths=$(printf "/input_files/%s " "${bam_files[@]}")
+
+# Run featureCounts using Apptainer
+apptainer exec \
+  --bind $input_bam_dir:/input_files \
+  --bind $(dirname $annotation_file):/annotations \
+  --bind $(dirname $output_count_file):/results \
+  /containers/apptainer/subread_2.0.1--hed695b0_0.sif \
+  featureCounts -p -T 4 -a /annotations/$(basename $annotation_file) -o /results/$(basename $output_count_file) -Q 10 $bam_paths
+
+
